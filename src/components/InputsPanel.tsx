@@ -25,6 +25,11 @@ export function InputsPanel({ meta, inputs, onChange, onReset, lang, error }: In
           {lang === "bn" ? "পুনরায় আঁকো" : "Redraw / reset"}
         </button>
       </div>
+      {meta.inputs.length === 0 && (
+        <p className="text-[12px]" style={{ color: "var(--muted)" }}>
+          {lang === "bn" ? "এই অঙ্কনে কোনো পরিবর্তনযোগ্য মান নেই — কৌশলটি একটি নির্দিষ্ট মানের জন্য।" : "No editable values here — this technique is tied to a fixed value."}
+        </p>
+      )}
       <div className="flex flex-col gap-3">
         {meta.inputs.map((spec) => {
           const v = inputs[spec.key];

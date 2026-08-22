@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import type { ConstructionMeta } from "@/constructions/types";
+import { resolveText, type ConstructionMeta } from "@/constructions/types";
 import { getConstruction, pathFor } from "@/constructions/registry";
 import { Canvas } from "@/components/Canvas";
 import { CautionLegend } from "@/components/CautionLegend";
@@ -54,7 +54,8 @@ export function ConstructionPage({ meta }: { meta: ConstructionMeta }) {
   }, [player, presentation, setPresentation]);
 
   const derivedFromMeta = meta.derivedFrom ? getConstruction(meta.derivedFrom) : undefined;
-  const activeStep = player.currentStep + 1 < meta.steps.length ? meta.steps[player.currentStep + 1] : meta.steps[meta.steps.length - 1];
+  const activeStepRaw = player.currentStep + 1 < meta.steps.length ? meta.steps[player.currentStep + 1] : meta.steps[meta.steps.length - 1];
+  const activeStep = resolveText(activeStepRaw.narration, inputs);
 
   const canvasEl = (
     <ErrorBoundary fallbackTitle={lang === "bn" ? "এই মানগুলোতে চিত্র আঁকা যাচ্ছে না" : "Cannot draw with these values"}>
@@ -68,7 +69,7 @@ export function ConstructionPage({ meta }: { meta: ConstructionMeta }) {
         <div className="flex-1 min-h-0">{canvasEl}</div>
         <div className="px-6 py-4" style={{ background: "var(--bg)", borderTop: "1px solid var(--panel-border)" }}>
           <p className="text-[15px] leading-relaxed" style={{ color: "var(--ink)" }}>
-            {lang === "bn" ? activeStep.narration.bn : activeStep.narration.en}
+            {lang === "bn" ? activeStep.bn : activeStep.en}
           </p>
           <div className="mt-2">
             <PlaybackControls player={player} lang={lang} />
@@ -148,7 +149,7 @@ export function ConstructionPage({ meta }: { meta: ConstructionMeta }) {
             <h3 className="text-[13px] font-semibold mb-2" style={{ color: "var(--ink)" }}>
               {lang === "bn" ? "অঙ্কনের ধাপসমূহ" : "Construction steps"}
             </h3>
-            <StepPanel meta={meta} player={player} lang={lang} />
+            <StepPanel meta={meta} inputs={inputs} player={player} lang={lang} />
           </div>
         </div>
       </div>

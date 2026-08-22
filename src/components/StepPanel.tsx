@@ -1,14 +1,15 @@
 import { useEffect, useRef } from "react";
-import type { ConstructionMeta } from "@/constructions/types";
+import { resolveText, type ConstructionMeta } from "@/constructions/types";
 import type { PlayerApi } from "@/state/useConstructionPlayer";
 
 interface StepPanelProps {
   meta: ConstructionMeta;
+  inputs: Record<string, number>;
   player: PlayerApi;
   lang: "bn" | "en";
 }
 
-export function StepPanel({ meta, player, lang }: StepPanelProps) {
+export function StepPanel({ meta, inputs, player, lang }: StepPanelProps) {
   const activeIndex = Math.min(player.currentStep + 1, meta.steps.length - 1);
   const itemRefs = useRef<Record<number, HTMLLIElement | null>>({});
 
@@ -24,6 +25,9 @@ export function StepPanel({ meta, player, lang }: StepPanelProps) {
         const isDone = i <= player.currentStep;
         const isActive = i === activeIndex;
         const lockedStepIdx = step.radiusLockRef ? stepIndexById[step.radiusLockRef] : undefined;
+        const title = resolveText(step.title, inputs);
+        const narration = resolveText(step.narration, inputs);
+        const caution = step.caution ? resolveText(step.caution, inputs) : null;
         return (
           <li
             key={step.id}
@@ -52,7 +56,7 @@ export function StepPanel({ meta, player, lang }: StepPanelProps) {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <span className="text-[13.5px] font-semibold" style={{ color: "var(--ink)" }}>
-                      {lang === "bn" ? step.title.bn : step.title.en}
+                      {lang === "bn" ? title.bn : title.en}
                     </span>
                     {lockedStepIdx !== undefined && (
                       <span
@@ -65,15 +69,15 @@ export function StepPanel({ meta, player, lang }: StepPanelProps) {
                     )}
                   </div>
                   <p className="text-[12.5px] mt-0.5 leading-snug" style={{ color: "var(--ink-soft)" }}>
-                    {lang === "bn" ? step.narration.bn : step.narration.en}
+                    {lang === "bn" ? narration.bn : narration.en}
                   </p>
-                  {isActive && step.caution && (
+                  {isActive && caution && (
                     <div
                       className="mt-1.5 text-[12px] rounded-md px-2 py-1.5 leading-snug flex gap-1.5"
                       style={{ background: "rgba(179,38,30,0.08)", color: "var(--danger)", border: "1px solid rgba(179,38,30,0.25)" }}
                     >
                       <span>⚠️</span>
-                      <span>{lang === "bn" ? step.caution.bn : step.caution.en}</span>
+                      <span>{lang === "bn" ? caution.bn : caution.en}</span>
                     </div>
                   )}
                 </div>

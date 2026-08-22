@@ -47,10 +47,17 @@ export interface BilingualText {
   en: string;
 }
 
+/** Static text, or text computed from the current numeric inputs (e.g. "11 ÷ 3 = 3.67 cm"). */
+export type DynamicText = BilingualText | ((inputs: Record<string, number>) => BilingualText);
+
+export function resolveText(t: DynamicText, inputs: Record<string, number>): BilingualText {
+  return typeof t === "function" ? t(inputs) : t;
+}
+
 export interface Step {
   id: string;
-  title: BilingualText;
-  narration: BilingualText;
+  title: DynamicText;
+  narration: DynamicText;
   tool: ToolKind;
   action:
     | "drawRay"
@@ -64,7 +71,7 @@ export interface Step {
     | "markPoint"
     | "info";
   /** Optional highlighted caution shown while this step plays. */
-  caution?: BilingualText;
+  caution?: DynamicText;
   /** id of the earlier step this step's compass radius reuses (drives the "radius unchanged" badge). */
   radiusLockRef?: string;
   compute(state: ConstructionState, inputs: Record<string, number>): StepResult;
