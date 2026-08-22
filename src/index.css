@@ -1,0 +1,94 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #f4f1ea;
+  --bg-elevated: #ffffff;
+  --grid-line: #d9d3c4;
+  --panel-border: #e2ddd0;
+  --ink: #1c1a17;
+  --ink-soft: #55504a;
+  --muted: #8a8377;
+  --accent: #1d5fbf;
+  --accent-soft: #dbe8fb;
+  --given: #1d5fbf;
+  --derived: #d9720c;
+  --danger: #b3261e;
+  --success: #1c7a4c;
+  --construction-line: #9a9488;
+  --final-ink: #16140f;
+  --tool-fill: rgba(29, 95, 191, 0.10);
+  --tool-stroke: #2c58a6;
+}
+
+:root[data-theme="dark"] {
+  --bg: #0f1521;
+  --bg-elevated: #161e2d;
+  --grid-line: #24314a;
+  --panel-border: #24314a;
+  --ink: #eef1f7;
+  --ink-soft: #b7c0d4;
+  --muted: #7c8aa8;
+  --accent: #6fa8ff;
+  --accent-soft: #1c2c4a;
+  --given: #6fa8ff;
+  --derived: #ffb454;
+  --danger: #ff6b66;
+  --success: #57d68d;
+  --construction-line: #5d6a86;
+  --final-ink: #f6f8fc;
+  --tool-fill: rgba(111, 168, 255, 0.12);
+  --tool-stroke: #8fbcff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Hind Siliguri", "Noto Sans Bengali", "Segoe UI", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.font-mono-num {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+}
+
+::selection {
+  background: var(--accent-soft);
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: var(--panel-border);
+  border-radius: 8px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+@keyframes ripple {
+  0% { r: 0; opacity: 0.9; }
+  100% { r: 14; opacity: 0; }
+}
+
+.pencil-ripple {
+  animation: ripple 550ms ease-out forwards;
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.fade-in-up {
+  animation: fade-in-up 260ms ease-out both;
+}
