@@ -51,7 +51,7 @@ const meta: ConstructionMeta = registerConstruction({
       action: "markLength",
       compute: (_s, inputs) => {
         const g = geometry(inputs);
-        return { namedPoints: { B: g.B, C: g.C }, entities: [segEnt(g.B, g.C, "given")], toolAnim: toolRuler(g.B, g.C) };
+        return { namedPoints: { B: g.B, C: g.C }, entities: [segEnt(g.B, g.C, "given", 1)], toolAnim: toolRuler(g.B, g.C) };
       },
     },
     {
@@ -80,7 +80,7 @@ const meta: ConstructionMeta = registerConstruction({
         const g = geometry(inputs);
         return {
           namedPoints: { A: g.A },
-          entities: [arcEnt(g.C, g.side, 15, 165, "construction"), segEnt(g.B, g.A, "final"), segEnt(g.C, g.A, "final")],
+          entities: [arcEnt(g.C, g.side, 15, 165, "construction"), segEnt(g.B, g.A, "final", 1), segEnt(g.C, g.A, "final", 1)],
           toolAnim: toolCompassFull(g.C, g.side, fmtCm(g.side, "bn")),
         };
       },

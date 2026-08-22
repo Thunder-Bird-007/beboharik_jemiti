@@ -51,7 +51,7 @@ const meta: ConstructionMeta = registerConstruction({
       action: "markLength",
       compute: (_s, inputs) => {
         const g = geometry(inputs);
-        return { namedPoints: { B: g.B, C: g.C }, entities: [segEnt(g.B, g.C, "given")], toolAnim: toolRuler(g.B, g.C) };
+        return { namedPoints: { B: g.B, C: g.C }, entities: [segEnt(g.B, g.C, "given", 1)], toolAnim: toolRuler(g.B, g.C) };
       },
     },
     {
@@ -69,7 +69,7 @@ const meta: ConstructionMeta = registerConstruction({
         const g = geometry(inputs);
         return {
           namedPoints: { A: g.A, F: g.F },
-          entities: [segEnt(g.B, g.F, "construction"), segEnt(g.B, g.A, "given"), rightAngleEnt(g.B, g.C, g.F)],
+          entities: [segEnt(g.B, g.F, "construction"), segEnt(g.B, g.A, "given", 1), rightAngleEnt(g.B, g.C, g.F)],
           toolAnim: toolCompass(g.B, g.side, 55, 90),
         };
       },
@@ -110,7 +110,7 @@ const meta: ConstructionMeta = registerConstruction({
       action: "joinPoints",
       compute: (_s, inputs) => {
         const g = geometry(inputs);
-        return { entities: [segEnt(g.A, g.D, "final"), segEnt(g.C, g.D, "final")], toolAnim: toolRuler(g.A, g.D) };
+        return { entities: [segEnt(g.A, g.D, "final", 1), segEnt(g.C, g.D, "final", 1)], toolAnim: toolRuler(g.A, g.D) };
       },
     },
   ],

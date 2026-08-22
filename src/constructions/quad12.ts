@@ -66,7 +66,7 @@ const meta: ConstructionMeta = registerConstruction({
       action: "markLength",
       compute: (_s, inputs) => {
         const g = geometry(inputs);
-        return { namedPoints: { A: g.A, B: g.B }, entities: [segEnt(g.A, g.B, "given")], toolAnim: toolRuler(g.A, g.B) };
+        return { namedPoints: { A: g.A, B: g.B }, entities: [segEnt(g.A, g.B, "given", 1)], toolAnim: toolRuler(g.A, g.B) };
       },
     },
     {
@@ -135,7 +135,10 @@ const meta: ConstructionMeta = registerConstruction({
       action: "joinPoints",
       compute: (_s, inputs) => {
         const g = geometry(inputs);
-        return { entities: [segEnt(g.C, g.D, "final"), segEnt(g.C, g.B, "final"), segEnt(g.A, g.D, "final")], toolAnim: toolRuler(g.C, g.D) };
+        return {
+          entities: [segEnt(g.C, g.D, "final", 1), segEnt(g.C, g.B, "final", 1), segEnt(g.A, g.D, "final", 1)],
+          toolAnim: toolRuler(g.C, g.D),
+        };
       },
     },
   ],
