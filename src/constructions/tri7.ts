@@ -2,8 +2,9 @@
 // Given: hypotenuse c, leg b (= BC). Draw BC, erect a perpendicular at B,
 // then strike an arc of radius c FROM C (not from B) to cut the perpendicular
 // at A — the right angle sits opposite the hypotenuse, at B.
-import { intersectCircleLine, pt } from "@/geom/core";
-import { rightAngleEnt, segEnt, toolCompass, toolRuler } from "./stepHelpers";
+import { angleOf, intersectCircleLine, pointAtDistanceAngle, pt } from "@/geom/core";
+import { perpendicularAtPoint } from "./classicOps";
+import { arcEnt, arcSweepTo, rightAngleEnt, segEnt, toolCompass, toolRuler } from "./stepHelpers";
 import { registerConstruction } from "./registry";
 import type { ConstructionMeta } from "./types";
 
@@ -16,7 +17,9 @@ function geometry(inputs: Record<string, number>) {
   const A = cands ? (cands[0].y >= cands[1].y ? cands[0] : cands[1]) : pt(0, Math.sqrt(Math.max(0.01, c * c - b * b)));
   A.label = "A";
   A.labelEn = "A";
-  return { B, C, Efar, A };
+  const perp = perpendicularAtPoint(B, angleOf(B, C), 1, Math.min(b, c) * 0.4);
+  const beyond = pointAtDistanceAngle(B, b * 0.3, perp.alongDirDeg + 180);
+  return { B, C, Efar, A, perp, beyond };
 }
 
 const meta: ConstructionMeta = registerConstruction({
@@ -53,16 +56,47 @@ const meta: ConstructionMeta = registerConstruction({
       },
     },
     {
-      id: "s2",
-      title: { bn: "ধাপ ২: B বিন্দুতে BE ⟂ BC আঁকো", en: "Step 2: At B, draw BE ⟂ BC" },
-      narration: { bn: "B বিন্দুতে BC-এর সাথে লম্ব রশ্মি BE আঁকো।", en: "At B, draw ray BE perpendicular to BC." },
+      id: "s2a",
+      title: { bn: "ধাপ ২ক: CB-কে B-এর ওপারে বাড়িয়ে চাপ আঁকো", en: "Step 2a: Extend CB beyond B, strike an arc" },
+      narration: { bn: "CB রেখাকে B-এর ওপারে সামান্য বাড়াও, তারপর B কেন্দ্র করে একটি চাপ আঁকো যা রেখাটিকে দুই পাশে ছেদ করে।", en: "Extend CB a little beyond B, then centred at B strike an arc crossing the line on both sides." },
       tool: "compass",
       action: "dropPerpendicular",
       compute: (_s, inputs) => {
         const g = geometry(inputs);
+        const { r, alongDirDeg } = g.perp;
         return {
-          entities: [segEnt(g.B, g.Efar, "construction"), rightAngleEnt(g.B, g.C, g.Efar)],
-          toolAnim: toolCompass(g.B, Math.min(g.Efar.y, 2.2), 0, 90),
+          entities: [segEnt(g.B, g.beyond, "construction", 0, true), arcEnt(g.B, r, alongDirDeg, alongDirDeg + 180, "construction")],
+          toolAnim: toolCompass(g.B, r, alongDirDeg, alongDirDeg + 180),
+        };
+      },
+    },
+    {
+      id: "s2b",
+      title: { bn: "ধাপ ২খ: দুই বিন্দু থেকে সমান ব্যাসার্ধে চাপ", en: "Step 2b: Equal-radius arcs from those two points" },
+      narration: { bn: "সেই দুই বিন্দু থেকে সমান, বড় ব্যাসার্ধে দুটি চাপ আঁকো।", en: "From those two points, strike two equal, larger-radius arcs." },
+      tool: "compass",
+      action: "dropPerpendicular",
+      compute: (_s, inputs) => {
+        const g = geometry(inputs);
+        const { M, r2, X } = g.perp;
+        const sw = arcSweepTo(M, X, { padding: 8 });
+        return { entities: [arcEnt(M, r2, sw.startAngle, sw.endAngle, "construction")], toolAnim: toolCompass(M, r2, sw.startAngle, sw.endAngle) };
+      },
+    },
+    {
+      id: "s2c",
+      title: { bn: "ধাপ ২গ: দ্বিতীয় সমান চাপ — লম্ব রশ্মি BE", en: "Step 2c: Second equal arc — perpendicular ray BE" },
+      narration: { bn: "একই ব্যাসার্ধে অন্য বিন্দু থেকেও চাপ আঁকো; ছেদবিন্দু দিয়ে B থেকে রশ্মি BE আঁকলেই তা BC-এর ওপর ঠিক লম্ব হয়।", en: "Strike the same-radius arc from the other point; ray BE from B through the crossing point is exactly perpendicular to BC." },
+      tool: "compass",
+      action: "dropPerpendicular",
+      radiusLockRef: "s2b",
+      compute: (_s, inputs) => {
+        const g = geometry(inputs);
+        const { N, r2, X } = g.perp;
+        const sw = arcSweepTo(N, X, { padding: 8 });
+        return {
+          entities: [arcEnt(N, r2, sw.startAngle, sw.endAngle, "construction"), segEnt(g.B, g.Efar, "construction"), rightAngleEnt(g.B, g.C, g.Efar)],
+          toolAnim: toolCompass(N, r2, sw.startAngle, sw.endAngle),
         };
       },
     },

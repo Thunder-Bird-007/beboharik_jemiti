@@ -3,7 +3,8 @@
 // QL = S along the base-angle ray, join R,L, then copy the base angle of
 // isosceles triangle QLR at R so the copy lands on QL at the apex P.
 import { angleBetween, angleOf, pt } from "@/geom/core";
-import { angleMarkEnt, copyAngleOntoLine, segEnt, toolCompass, toolProtractor, toolRuler } from "./stepHelpers";
+import { copyAngleCompass } from "./classicOps";
+import { angleMarkEnt, arcEnt, arcSweepTo, copyAngleOntoLine, segEnt, toolCompass, toolProtractor, toolRuler } from "./stepHelpers";
 import { registerConstruction } from "./registry";
 import type { ConstructionMeta } from "./types";
 
@@ -18,7 +19,8 @@ function geometry(inputs: Record<string, number>) {
   const P = copyAngleOntoLine(R, L, angleQLR, Q, L, Q);
   P.label = "P";
   P.labelEn = "P";
-  return { Q, R, X, L, P, dirQX, angleQLR };
+  const copyOp = copyAngleCompass(L, Q, R, R, angleOf(R, L), angleOf(R, P));
+  return { Q, R, X, L, P, dirQX, angleQLR, copyOp };
 }
 
 const meta: ConstructionMeta = registerConstruction({
@@ -97,24 +99,58 @@ const meta: ConstructionMeta = registerConstruction({
       },
     },
     {
-      id: "s5",
-      title: { bn: "ধাপ ৫: R-এ ∠LRT = ∠QLR আঁকো — P বিন্দু", en: "Step 5: At R, draw ∠LRT = ∠QLR — point P" },
+      id: "s5a",
+      title: { bn: "ধাপ ৫ক: L থেকে চাপ — LQ ও LR-কে ছেদ করে", en: "Step 5a: Arc from L — crosses LQ and LR" },
       narration: {
-        bn: "যে পাশে Q বিন্দু আছে সেই পাশে, R বিন্দুতে ∠QLR-এর সমান কোণ ∠LRT আঁকো; RT রশ্মি QX-কে P বিন্দুতে ছেদ করে।",
-        en: "On the side where Q lies, at R copy ∠QLR as ∠LRT; ray RT meets QX at P.",
+        bn: "∠QLR কপি করতে, L কেন্দ্র করে একটি চাপ আঁকো যা LQ ও LR উভয়কে ছেদ করে।",
+        en: "To copy ∠QLR, strike an arc centred at L crossing both LQ and LR.",
       },
       tool: "compass",
       action: "drawAngle",
+      compute: (_s, inputs) => {
+        const g = geometry(inputs);
+        const { P, Q: cQ, r1 } = g.copyOp;
+        return { entities: [arcEnt(g.L, r1, angleOf(g.L, cQ), angleOf(g.L, P), "construction")], toolAnim: toolCompass(g.L, r1, angleOf(g.L, cQ), angleOf(g.L, P)) };
+      },
+    },
+    {
+      id: "s5b",
+      title: { bn: "ধাপ ৫খ: R-এ একই ব্যাসার্ধে চাপ (RL বরাবর)", en: "Step 5b: Same-radius arc at R (along RL)" },
+      narration: {
+        bn: "যে পাশে Q বিন্দু আছে সেই পাশে, কম্পাসের ব্যাসার্ধ না পাল্টিয়ে R থেকে RL বরাবর একই ব্যাসার্ধে চাপ আঁকো।",
+        en: "On the side where Q lies, without changing the compass, strike the same-radius arc at R, crossing RL.",
+      },
+      tool: "compass",
+      action: "drawAngle",
+      radiusLockRef: "s5a",
       caution: {
         bn: "⚠️ কোণটি অবশ্যই সেই পাশে আঁকতে হবে যেখানে Q বিন্দু আছে, নাহলে P বিন্দু QX রশ্মির ওপর পড়বে না।",
         en: "⚠️ The angle must be drawn on the side where Q lies, or P won't land on ray QX at all.",
       },
       compute: (_s, inputs) => {
         const g = geometry(inputs);
+        const { r1, Pt } = g.copyOp;
+        const sw = arcSweepTo(g.R, Pt, { padding: 10 });
+        return { entities: [arcEnt(g.R, r1, sw.startAngle, sw.endAngle, "construction")], toolAnim: toolCompass(g.R, r1, sw.startAngle, sw.endAngle) };
+      },
+    },
+    {
+      id: "s5c",
+      title: { bn: "ধাপ ৫গ: চাপ-দূরত্ব বসিয়ে P বিন্দু পাও", en: "Step 5c: Transfer the arc-chord to get point P" },
+      narration: {
+        bn: "প্রথম চাপের চাপ-দূরত্ব R-এর চাপে বসাও; পাওয়া বিন্দু দিয়ে রশ্মি RT টানলে তা QX-কে P বিন্দুতে ছেদ করে।",
+        en: "Transfer the chord-distance onto R's arc; ray RT through that point cuts QX at P.",
+      },
+      tool: "compass",
+      action: "drawAngle",
+      compute: (_s, inputs) => {
+        const g = geometry(inputs);
+        const { r2, Pt, Qt } = g.copyOp;
+        const sw = arcSweepTo(Pt, Qt, { padding: 8 });
         return {
           namedPoints: { P: g.P },
-          entities: [segEnt(g.R, g.P, "final"), angleMarkEnt(g.R, g.L, g.P, undefined, 0.6, "final")],
-          toolAnim: toolCompass(g.R, 0.7, angleOf(g.R, g.L), angleOf(g.R, g.P), "∠LRT"),
+          entities: [arcEnt(Pt, r2, sw.startAngle, sw.endAngle, "construction"), segEnt(g.R, g.P, "final"), angleMarkEnt(g.R, g.L, g.P, undefined, 0.6, "final")],
+          toolAnim: toolCompass(Pt, r2, sw.startAngle, sw.endAngle),
         };
       },
     },

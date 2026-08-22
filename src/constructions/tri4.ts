@@ -4,7 +4,8 @@
 // will land), join C,D, then copy ∠EDC at C onto the ray so it lands at A —
 // this makes triangle ACD isosceles (CA = AD), giving AB - AC = BD = d.
 import { angleBetween, angleOf, pointAtDistanceAngle, pt } from "@/geom/core";
-import { angleMarkEnt, copyAngleOntoLine, segEnt, toolCompass, toolProtractor, toolRuler } from "./stepHelpers";
+import { copyAngleCompass } from "./classicOps";
+import { angleMarkEnt, arcEnt, arcSweepTo, copyAngleOntoLine, segEnt, toolCompass, toolProtractor, toolRuler } from "./stepHelpers";
 import { registerConstruction } from "./registry";
 import type { ConstructionMeta } from "./types";
 
@@ -21,7 +22,8 @@ function geometry(inputs: Record<string, number>) {
   const A = copyAngleOntoLine(C, D, angleEDC, B, Efar, Efar);
   A.label = "A";
   A.labelEn = "A";
-  return { B, C, D, Efar, A, dirBE, angleEDC };
+  const copyOp = copyAngleCompass(D, Efar, C, C, angleOf(C, D), angleOf(C, A));
+  return { B, C, D, Efar, A, dirBE, angleEDC, copyOp };
 }
 
 const meta: ConstructionMeta = registerConstruction({
@@ -99,24 +101,58 @@ const meta: ConstructionMeta = registerConstruction({
       },
     },
     {
-      id: "s5",
-      title: { bn: "ধাপ ৫: C-তে ∠DCA = ∠EDC আঁকো — A বিন্দু", en: "Step 5: At C, draw ∠DCA = ∠EDC — point A" },
+      id: "s5a",
+      title: { bn: "ধাপ ৫ক: D থেকে চাপ — DE ও DC-কে ছেদ করে", en: "Step 5a: Arc from D — crosses DE and DC" },
       narration: {
-        bn: "DC রেখার যে পাশে E আছে সেই পাশে, C বিন্দুতে ∠EDC-এর সমান কোণ ∠DCA আঁকো; CA রশ্মি BE-কে A বিন্দুতে ছেদ করে।",
-        en: "On the side of DC where E lies, at C copy ∠EDC as ∠DCA; ray CA meets BE at A.",
+        bn: "∠EDC কপি করতে, D কেন্দ্র করে একটি চাপ আঁকো যা DE ও DC উভয়কে ছেদ করে।",
+        en: "To copy ∠EDC, strike an arc centred at D crossing both DE and DC.",
       },
       tool: "compass",
       action: "drawAngle",
+      compute: (_s, inputs) => {
+        const g = geometry(inputs);
+        const { P, Q, r1 } = g.copyOp;
+        return { entities: [arcEnt(g.D, r1, angleOf(g.D, Q), angleOf(g.D, P), "construction")], toolAnim: toolCompass(g.D, r1, angleOf(g.D, Q), angleOf(g.D, P)) };
+      },
+    },
+    {
+      id: "s5b",
+      title: { bn: "ধাপ ৫খ: C-তে একই ব্যাসার্ধে চাপ (CD বরাবর)", en: "Step 5b: Same-radius arc at C (along CD)" },
+      narration: {
+        bn: "DC রেখার যে পাশে E আছে সেই পাশে, কম্পাসের ব্যাসার্ধ না পাল্টিয়ে C থেকে CD বরাবর একই ব্যাসার্ধে চাপ আঁকো।",
+        en: "On the side of DC where E lies, without changing the compass, strike the same-radius arc at C, crossing CD.",
+      },
+      tool: "compass",
+      action: "drawAngle",
+      radiusLockRef: "s5a",
       caution: {
         bn: "⚠️ এটি অন্তর পদ্ধতি (#৩-এর সমষ্টি পদ্ধতির বিপরীত) — এখানে D থাকে B ও A-এর মাঝে, যেখানে সমষ্টি পদ্ধতিতে L থাকত A-এর ওপাশে।",
         en: "⚠️ This is the difference method (opposite of #3's sum method) — here D sits between B and A, whereas in the sum method L sat beyond A.",
       },
       compute: (_s, inputs) => {
         const g = geometry(inputs);
+        const { r1, Pt } = g.copyOp;
+        const sw = arcSweepTo(g.C, Pt, { padding: 10 });
+        return { entities: [arcEnt(g.C, r1, sw.startAngle, sw.endAngle, "construction")], toolAnim: toolCompass(g.C, r1, sw.startAngle, sw.endAngle) };
+      },
+    },
+    {
+      id: "s5c",
+      title: { bn: "ধাপ ৫গ: চাপ-দূরত্ব বসিয়ে A বিন্দু পাও", en: "Step 5c: Transfer the arc-chord to get point A" },
+      narration: {
+        bn: "প্রথম চাপের চাপ-দূরত্ব C-এর চাপে বসাও; পাওয়া বিন্দু দিয়ে রশ্মি CA টানলে তা BE-কে A বিন্দুতে ছেদ করে।",
+        en: "Transfer the chord-distance onto C's arc; ray CA through that point cuts BE at A.",
+      },
+      tool: "compass",
+      action: "drawAngle",
+      compute: (_s, inputs) => {
+        const g = geometry(inputs);
+        const { r2, Pt, Qt } = g.copyOp;
+        const sw = arcSweepTo(Pt, Qt, { padding: 8 });
         return {
           namedPoints: { A: g.A },
-          entities: [segEnt(g.C, g.A, "final"), angleMarkEnt(g.C, g.D, g.A, undefined, 0.6, "final")],
-          toolAnim: toolCompass(g.C, 0.7, angleOf(g.C, g.D), angleOf(g.C, g.A), "∠DCA"),
+          entities: [arcEnt(Pt, r2, sw.startAngle, sw.endAngle, "construction"), segEnt(g.C, g.A, "final"), angleMarkEnt(g.C, g.D, g.A, undefined, 0.6, "final")],
+          toolAnim: toolCompass(Pt, r2, sw.startAngle, sw.endAngle),
         };
       },
     },

@@ -3,9 +3,10 @@
 // arcs) with side = perimeter/4. Phase 2 chains on: draw both diagonals to
 // find the centre O, drop a perpendicular to one side to find the inradius
 // OF, then draw the incircle.
-import { angleOf, projectPointOnLine, pt } from "@/geom/core";
+import { angleOf, pointAtDistanceAngle, projectPointOnLine, pt } from "@/geom/core";
 import { fmtCm, fmtNum } from "@/lib/format";
-import { arcEnt, rightAngleEnt, segEnt, toolCompass, toolCompassFull, toolRuler } from "./stepHelpers";
+import { perpendicularAtPoint } from "./classicOps";
+import { arcEnt, arcSweepTo, rightAngleEnt, segEnt, toolCompass, toolCompassFull, toolRuler } from "./stepHelpers";
 import { registerConstruction } from "./registry";
 import type { ConstructionMeta } from "./types";
 
@@ -21,7 +22,9 @@ function geometry(inputs: Record<string, number>) {
   G.label = "G";
   G.labelEn = "G";
   const radius = Math.hypot(O.x - G.x, O.y - G.y);
-  return { side, B, C, A, D, F0, O, G, radius };
+  const perp = perpendicularAtPoint(B, angleOf(B, C), 1, side * 0.4);
+  const beyond = pointAtDistanceAngle(B, side * 0.3, perp.alongDirDeg + 180);
+  return { side, B, C, A, D, F0, O, G, radius, perp, beyond };
 }
 
 const meta: ConstructionMeta = registerConstruction({
@@ -60,19 +63,60 @@ const meta: ConstructionMeta = registerConstruction({
       },
     },
     {
-      id: "s2",
-      title: { bn: "ধাপ ২: B-তে লম্ব BF আঁকো, BA = বাহু কাটো", en: "Step 2: At B, draw perpendicular BF, cut BA = side" },
-      narration: { bn: "B বিন্দুতে লম্ব রশ্মি BF আঁকো, তারপর BA = বাহু কেটে নাও।", en: "At B, draw perpendicular ray BF, then cut BA equal to the side." },
+      id: "s2a",
+      title: { bn: "ধাপ ২ক: CB-কে B-এর ওপারে বাড়িয়ে চাপ আঁকো", en: "Step 2a: Extend CB beyond B, strike an arc" },
+      narration: { bn: "CB রেখাকে B-এর ওপারে সামান্য বাড়াও, তারপর B কেন্দ্র করে একটি চাপ আঁকো যা রেখাটিকে দুই পাশে ছেদ করে।", en: "Extend CB a little beyond B, then centred at B strike an arc crossing the line on both sides." },
       tool: "compass",
       action: "dropPerpendicular",
+      compute: (_s, inputs) => {
+        const g = geometry(inputs);
+        const { r, alongDirDeg } = g.perp;
+        return {
+          entities: [segEnt(g.B, g.beyond, "construction", 0, true), arcEnt(g.B, r, alongDirDeg, alongDirDeg + 180, "construction")],
+          toolAnim: toolCompass(g.B, r, alongDirDeg, alongDirDeg + 180),
+        };
+      },
+    },
+    {
+      id: "s2b",
+      title: { bn: "ধাপ ২খ: দুই বিন্দু থেকে সমান ব্যাসার্ধে চাপ", en: "Step 2b: Equal-radius arcs from those two points" },
+      narration: { bn: "সেই দুই বিন্দু থেকে সমান, বড় ব্যাসার্ধে দুটি চাপ আঁকো।", en: "From those two points, strike two equal, larger-radius arcs." },
+      tool: "compass",
+      action: "dropPerpendicular",
+      compute: (_s, inputs) => {
+        const g = geometry(inputs);
+        const { M, r2, X } = g.perp;
+        const sw = arcSweepTo(M, X, { padding: 8 });
+        return { entities: [arcEnt(M, r2, sw.startAngle, sw.endAngle, "construction")], toolAnim: toolCompass(M, r2, sw.startAngle, sw.endAngle) };
+      },
+    },
+    {
+      id: "s2c",
+      title: { bn: "ধাপ ২গ: দ্বিতীয় সমান চাপ — লম্ব রশ্মি BF", en: "Step 2c: Second equal arc — perpendicular ray BF" },
+      narration: { bn: "একই ব্যাসার্ধে অন্য বিন্দু থেকেও চাপ আঁকো; ছেদবিন্দু দিয়ে B থেকে রশ্মি BF আঁকলেই তা BC-এর ওপর ঠিক লম্ব হয়।", en: "Strike the same-radius arc from the other point; ray BF from B through the crossing point is exactly perpendicular to BC." },
+      tool: "compass",
+      action: "dropPerpendicular",
+      radiusLockRef: "s2b",
+      compute: (_s, inputs) => {
+        const g = geometry(inputs);
+        const { N, r2, X } = g.perp;
+        const sw = arcSweepTo(N, X, { padding: 8 });
+        return {
+          entities: [arcEnt(N, r2, sw.startAngle, sw.endAngle, "construction"), segEnt(g.B, g.F0, "construction"), rightAngleEnt(g.B, g.C, g.F0)],
+          toolAnim: toolCompass(N, r2, sw.startAngle, sw.endAngle),
+        };
+      },
+    },
+    {
+      id: "s2d",
+      title: { bn: "ধাপ ২ঘ: BF-এ BA = বাহু কাটো", en: "Step 2d: On BF, cut BA = side" },
+      narration: { bn: "রশ্মি BF-এর ওপর B থেকে বাহুর সমান দূরত্বে A চিহ্নিত করো।", en: "On ray BF, mark A at a distance equal to the side from B." },
+      tool: "compass",
+      action: "markLength",
       radiusLockRef: "s1",
       compute: (_s, inputs) => {
         const g = geometry(inputs);
-        return {
-          namedPoints: { A: g.A },
-          entities: [segEnt(g.B, g.F0, "construction"), segEnt(g.B, g.A, "given"), rightAngleEnt(g.B, g.C, g.F0)],
-          toolAnim: toolCompass(g.B, g.side, 55, 90),
-        };
+        return { namedPoints: { A: g.A }, entities: [segEnt(g.B, g.A, "given")], toolAnim: toolCompass(g.B, g.side, 55, 90) };
       },
     },
     {

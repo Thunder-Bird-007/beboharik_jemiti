@@ -2,9 +2,10 @@
 // Given: triangle perimeter a ⇒ square side = a/4. The SAME radius (a/4) gets
 // reused four separate times: twice to lay off the two sides BC, BA, and
 // twice more for the locating arcs from A and C that find the fourth corner D.
-import { pt } from "@/geom/core";
+import { angleOf, pointAtDistanceAngle, pt } from "@/geom/core";
 import { fmtCm, fmtNum } from "@/lib/format";
-import { rightAngleEnt, segEnt, toolCompass, toolRuler } from "./stepHelpers";
+import { perpendicularAtPoint } from "./classicOps";
+import { arcEnt, arcSweepTo, rightAngleEnt, segEnt, toolCompass, toolRuler } from "./stepHelpers";
 import { registerConstruction } from "./registry";
 import type { ConstructionMeta } from "./types";
 
@@ -15,7 +16,9 @@ function geometry(inputs: Record<string, number>) {
   const A = pt(0, side, "A");
   const D = pt(side, side, "D");
   const F = pt(0, side * 1.2, "F");
-  return { side, B, C, A, D, F };
+  const perp = perpendicularAtPoint(B, angleOf(B, C), 1, side * 0.4);
+  const beyond = pointAtDistanceAngle(B, side * 0.3, perp.alongDirDeg + 180);
+  return { side, B, C, A, D, F, perp, beyond };
 }
 
 const meta: ConstructionMeta = registerConstruction({
@@ -55,11 +58,57 @@ const meta: ConstructionMeta = registerConstruction({
       },
     },
     {
-      id: "s2",
-      title: { bn: "ধাপ ২: B-তে লম্ব BF আঁকো, BA = a/4 কাটো", en: "Step 2: At B, draw perpendicular BF, cut BA = a/4" },
-      narration: { bn: "B বিন্দুতে BC-এর লম্ব রশ্মি BF আঁকো, তারপর তাতে BA = a/4 কেটে নাও।", en: "At B, draw ray BF perpendicular to BC, then cut BA = a/4 on it." },
+      id: "s2a",
+      title: { bn: "ধাপ ২ক: CB-কে B-এর ওপারে বাড়িয়ে চাপ আঁকো", en: "Step 2a: Extend CB beyond B, strike an arc" },
+      narration: { bn: "CB রেখাকে B-এর ওপারে সামান্য বাড়াও, তারপর B কেন্দ্র করে একটি চাপ আঁকো যা রেখাটিকে দুই পাশে ছেদ করে।", en: "Extend CB a little beyond B, then centred at B strike an arc crossing the line on both sides." },
       tool: "compass",
       action: "dropPerpendicular",
+      compute: (_s, inputs) => {
+        const g = geometry(inputs);
+        const { r, alongDirDeg } = g.perp;
+        return {
+          entities: [segEnt(g.B, g.beyond, "construction", 0, true), arcEnt(g.B, r, alongDirDeg, alongDirDeg + 180, "construction")],
+          toolAnim: toolCompass(g.B, r, alongDirDeg, alongDirDeg + 180),
+        };
+      },
+    },
+    {
+      id: "s2b",
+      title: { bn: "ধাপ ২খ: দুই বিন্দু থেকে সমান ব্যাসার্ধে চাপ", en: "Step 2b: Equal-radius arcs from those two points" },
+      narration: { bn: "সেই দুই বিন্দু থেকে সমান, বড় ব্যাসার্ধে দুটি চাপ আঁকো।", en: "From those two points, strike two equal, larger-radius arcs." },
+      tool: "compass",
+      action: "dropPerpendicular",
+      compute: (_s, inputs) => {
+        const g = geometry(inputs);
+        const { M, r2, X } = g.perp;
+        const sw = arcSweepTo(M, X, { padding: 8 });
+        return { entities: [arcEnt(M, r2, sw.startAngle, sw.endAngle, "construction")], toolAnim: toolCompass(M, r2, sw.startAngle, sw.endAngle) };
+      },
+    },
+    {
+      id: "s2c",
+      title: { bn: "ধাপ ২গ: দ্বিতীয় সমান চাপ — লম্ব রশ্মি BF", en: "Step 2c: Second equal arc — perpendicular ray BF" },
+      narration: { bn: "একই ব্যাসার্ধে অন্য বিন্দু থেকেও চাপ আঁকো; ছেদবিন্দু দিয়ে B থেকে রশ্মি BF আঁকলেই তা BC-এর ওপর ঠিক লম্ব হয়।", en: "Strike the same-radius arc from the other point; ray BF from B through the crossing point is exactly perpendicular to BC." },
+      tool: "compass",
+      action: "dropPerpendicular",
+      radiusLockRef: "s2b",
+      compute: (_s, inputs) => {
+        const g = geometry(inputs);
+        const { N, r2, X } = g.perp;
+        const sw = arcSweepTo(N, X, { padding: 8 });
+        return {
+          namedPoints: { F: g.F },
+          entities: [arcEnt(N, r2, sw.startAngle, sw.endAngle, "construction"), segEnt(g.B, g.F, "construction"), rightAngleEnt(g.B, g.C, g.F)],
+          toolAnim: toolCompass(N, r2, sw.startAngle, sw.endAngle),
+        };
+      },
+    },
+    {
+      id: "s2d",
+      title: { bn: "ধাপ ২ঘ: BF-এ BA = a/4 কাটো", en: "Step 2d: On BF, cut BA = a/4" },
+      narration: { bn: "রশ্মি BF-এর ওপর B থেকে a/4 দূরত্বে A চিহ্নিত করো।", en: "On ray BF, mark A at a distance a/4 from B." },
+      tool: "compass",
+      action: "markLength",
       radiusLockRef: "s1",
       caution: {
         bn: "🔒 BA-এর দৈর্ঘ্যও BC-এর সমান — একই কম্পাস-মাপ পুনরায় ব্যবহার করো।",
@@ -68,8 +117,8 @@ const meta: ConstructionMeta = registerConstruction({
       compute: (_s, inputs) => {
         const g = geometry(inputs);
         return {
-          namedPoints: { A: g.A, F: g.F },
-          entities: [segEnt(g.B, g.F, "construction"), segEnt(g.B, g.A, "given", 1), rightAngleEnt(g.B, g.C, g.F)],
+          namedPoints: { A: g.A },
+          entities: [segEnt(g.B, g.A, "given", 1)],
           toolAnim: toolCompass(g.B, g.side, 55, 90),
         };
       },

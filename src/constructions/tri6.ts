@@ -3,7 +3,8 @@
 // one works "backwards": the altitude AD is drawn FIRST and is perpendicular
 // to the base by construction, not measured after the fact.
 import { angleOf, intersectLineLine, pointAtDistanceAngle, pt } from "@/geom/core";
-import { rightAngleEnt, segEnt, toolCompass, toolProtractor, toolRuler } from "./stepHelpers";
+import { perpendicularAtPoint } from "./classicOps";
+import { arcEnt, arcSweepTo, rightAngleEnt, segEnt, toolCompass, toolProtractor, toolRuler } from "./stepHelpers";
 import { registerConstruction } from "./registry";
 import type { ConstructionMeta } from "./types";
 
@@ -23,12 +24,30 @@ function geometry(inputs: Record<string, number>) {
   T.label = "T";
   T.labelEn = "T";
   const plen = d * 0.55;
-  const P = pt(-plen, d, "P");
-  const Q = pt(plen, d, "Q");
   const mlen = Math.max(Math.abs(S.x), Math.abs(T.x)) + d * 0.35;
-  const M = pt(-mlen, 0, "M");
-  const N = pt(mlen, 0, "N");
-  return { D, A, S, T, P, Q, M, N, dirAS, dirAT };
+
+  // Real perpendiculars: the classic "arc across the line, then two crossing
+  // arcs" technique gives one direction; the line simply extends through the
+  // point to the opposite (mirror) side.
+  const perpAtA = perpendicularAtPoint(A, angleOf(A, D), 1, Math.min(d, 2.4) * 0.42);
+  const qDir = angleOf(A, perpAtA.X);
+  const Q = pointAtDistanceAngle(A, plen, qDir);
+  Q.label = "Q";
+  Q.labelEn = "Q";
+  const P = pointAtDistanceAngle(A, plen, qDir + 180);
+  P.label = "P";
+  P.labelEn = "P";
+
+  const perpAtD = perpendicularAtPoint(D, angleOf(D, A), 1, Math.min(d, 2.4) * 0.42);
+  const mDir = angleOf(D, perpAtD.X);
+  const M = pointAtDistanceAngle(D, mlen, mDir);
+  M.label = "M";
+  M.labelEn = "M";
+  const N = pointAtDistanceAngle(D, mlen, mDir + 180);
+  N.label = "N";
+  N.labelEn = "N";
+
+  return { D, A, S, T, P, Q, M, N, dirAS, dirAT, perpAtA, perpAtD };
 }
 
 const meta: ConstructionMeta = registerConstruction({
@@ -70,32 +89,88 @@ const meta: ConstructionMeta = registerConstruction({
       },
     },
     {
-      id: "s2",
-      title: { bn: "ধাপ ২: A বিন্দুতে AD-এর লম্ব PQ আঁকো", en: "Step 2: At A, draw PQ perpendicular to AD" },
-      narration: { bn: "A বিন্দুতে AD রেখার সাথে লম্ব রেখা PQ আঁকো।", en: "At A, draw line PQ perpendicular to AD." },
+      id: "s2a",
+      title: { bn: "ধাপ ২ক: A থেকে চাপ — AD-এর দুই পাশে চিহ্নিত করো", en: "Step 2a: Arc from A — marks both sides of AD" },
+      narration: { bn: "A কেন্দ্র করে একটি চাপ আঁকো, যা AD রেখাকে দুই পাশে সমান দূরত্বে ছেদ করে।", en: "Centred at A, strike an arc crossing line AD at equal distances on both sides." },
       tool: "compass",
       action: "dropPerpendicular",
       compute: (_s, inputs) => {
         const g = geometry(inputs);
+        const { r, alongDirDeg } = g.perpAtA;
+        return { entities: [arcEnt(g.A, r, alongDirDeg, alongDirDeg + 180, "construction")], toolAnim: toolCompass(g.A, r, alongDirDeg, alongDirDeg + 180) };
+      },
+    },
+    {
+      id: "s2b",
+      title: { bn: "ধাপ ২খ: দুই বিন্দু থেকে সমান ব্যাসার্ধে চাপ", en: "Step 2b: Equal-radius arcs from those two points" },
+      narration: { bn: "সেই দুই বিন্দু থেকে সমান, বড় ব্যাসার্ধে দুটি চাপ আঁকো।", en: "From those two points, strike two equal, larger-radius arcs." },
+      tool: "compass",
+      action: "dropPerpendicular",
+      compute: (_s, inputs) => {
+        const g = geometry(inputs);
+        const { M: m1, r2, X } = g.perpAtA;
+        const sw = arcSweepTo(m1, X, { padding: 8 });
+        return { entities: [arcEnt(m1, r2, sw.startAngle, sw.endAngle, "construction")], toolAnim: toolCompass(m1, r2, sw.startAngle, sw.endAngle) };
+      },
+    },
+    {
+      id: "s2c",
+      title: { bn: "ধাপ ২গ: দ্বিতীয় সমান চাপ — লম্ব রেখা PQ", en: "Step 2c: Second equal arc — perpendicular line PQ" },
+      narration: { bn: "একই ব্যাসার্ধে অন্য বিন্দু থেকেও চাপ আঁকো; ছেদবিন্দু দিয়ে A-এর মধ্য দিয়ে রেখা টানলেই তা AD-এর ওপর লম্ব হয় — উভয় পাশে বাড়িয়ে PQ পাও।", en: "Strike the same-radius arc from the other point; the line through A and the crossing point is perpendicular to AD — extend it both ways to get PQ." },
+      tool: "compass",
+      action: "dropPerpendicular",
+      radiusLockRef: "s2b",
+      compute: (_s, inputs) => {
+        const g = geometry(inputs);
+        const { N: n1, r2, X } = g.perpAtA;
+        const sw = arcSweepTo(n1, X, { padding: 8 });
         return {
           namedPoints: { P: g.P, Q: g.Q },
-          entities: [segEnt(g.P, g.Q, "construction"), rightAngleEnt(g.A, g.D, g.Q)],
-          toolAnim: toolCompass(g.A, 0.6, angleOf(g.A, g.D), angleOf(g.A, g.D) + 90),
+          entities: [arcEnt(n1, r2, sw.startAngle, sw.endAngle, "construction"), segEnt(g.P, g.Q, "construction"), rightAngleEnt(g.A, g.D, g.Q)],
+          toolAnim: toolCompass(n1, r2, sw.startAngle, sw.endAngle),
         };
       },
     },
     {
-      id: "s3",
-      title: { bn: "ধাপ ৩: D বিন্দুতে AD-এর লম্ব MN আঁকো", en: "Step 3: At D, draw MN perpendicular to AD" },
-      narration: { bn: "D বিন্দুতে AD রেখার সাথে লম্ব রেখা MN আঁকো — এটিই হবে ত্রিভুজের ভূমি-রেখা।", en: "At D, draw line MN perpendicular to AD — this will hold the triangle's base." },
+      id: "s3a",
+      title: { bn: "ধাপ ৩ক: D থেকে চাপ — AD-এর দুই পাশে চিহ্নিত করো", en: "Step 3a: Arc from D — marks both sides of AD" },
+      narration: { bn: "D কেন্দ্র করে একটি চাপ আঁকো, যা AD রেখাকে দুই পাশে সমান দূরত্বে ছেদ করে।", en: "Centred at D, strike an arc crossing line AD at equal distances on both sides." },
       tool: "compass",
       action: "dropPerpendicular",
       compute: (_s, inputs) => {
         const g = geometry(inputs);
+        const { r, alongDirDeg } = g.perpAtD;
+        return { entities: [arcEnt(g.D, r, alongDirDeg, alongDirDeg + 180, "construction")], toolAnim: toolCompass(g.D, r, alongDirDeg, alongDirDeg + 180) };
+      },
+    },
+    {
+      id: "s3b",
+      title: { bn: "ধাপ ৩খ: দুই বিন্দু থেকে সমান ব্যাসার্ধে চাপ", en: "Step 3b: Equal-radius arcs from those two points" },
+      narration: { bn: "সেই দুই বিন্দু থেকে সমান, বড় ব্যাসার্ধে দুটি চাপ আঁকো।", en: "From those two points, strike two equal, larger-radius arcs." },
+      tool: "compass",
+      action: "dropPerpendicular",
+      compute: (_s, inputs) => {
+        const g = geometry(inputs);
+        const { M: m1, r2, X } = g.perpAtD;
+        const sw = arcSweepTo(m1, X, { padding: 8 });
+        return { entities: [arcEnt(m1, r2, sw.startAngle, sw.endAngle, "construction")], toolAnim: toolCompass(m1, r2, sw.startAngle, sw.endAngle) };
+      },
+    },
+    {
+      id: "s3c",
+      title: { bn: "ধাপ ৩গ: দ্বিতীয় সমান চাপ — ভূমি-রেখা MN", en: "Step 3c: Second equal arc — base line MN" },
+      narration: { bn: "একই ব্যাসার্ধে অন্য বিন্দু থেকে চাপ আঁকো; ছেদবিন্দু দিয়ে D-এর মধ্য দিয়ে রেখা টানলেই তা AD-এর ওপর লম্ব হয় — এটিই ত্রিভুজের ভূমি-রেখা MN।", en: "Strike the same-radius arc from the other point; the line through D and the crossing point is perpendicular to AD — this becomes the triangle's base line MN." },
+      tool: "compass",
+      action: "dropPerpendicular",
+      radiusLockRef: "s3b",
+      compute: (_s, inputs) => {
+        const g = geometry(inputs);
+        const { N: n1, r2, X } = g.perpAtD;
+        const sw = arcSweepTo(n1, X, { padding: 8 });
         return {
           namedPoints: { M: g.M, N: g.N },
-          entities: [segEnt(g.M, g.N, "construction"), rightAngleEnt(g.D, g.A, g.N)],
-          toolAnim: toolCompass(g.D, 0.6, angleOf(g.D, g.A), angleOf(g.D, g.A) - 90),
+          entities: [arcEnt(n1, r2, sw.startAngle, sw.endAngle, "construction"), segEnt(g.M, g.N, "construction"), rightAngleEnt(g.D, g.A, g.N)],
+          toolAnim: toolCompass(n1, r2, sw.startAngle, sw.endAngle),
         };
       },
     },
